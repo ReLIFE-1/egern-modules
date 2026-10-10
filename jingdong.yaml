@@ -49,7 +49,7 @@ compat_arguments_desc: |
 
 rules:
   - url_regex:
-      match: '^http:\/\/\\w{32}\.jddebug\.com\/diagnose\?'
+      match: '^http:\/\/\w{32}\.jddebug\.com\/diagnose\?'
       policy: REJECT
   - domain:
       match: httpdns.alicdn.com
@@ -63,6 +63,23 @@ rules:
   - domain:
       match: httpdns.dlied1.qq.com
       policy: REJECT
+  - domain:
+      match: httpdns.baidubce.com
+      policy: REJECT
+  - domain:
+      match: dns.alidns.com
+      policy: REJECT
+  - domain:
+      match: doh.pub
+      policy: REJECT
+  - ip_cidr:
+      match: 203.107.1.1/24
+      policy: REJECT
+      no_resolve: true
+  - ip_cidr:
+      match: 119.29.29.29/32
+      policy: REJECT
+      no_resolve: true
 
 map_locals:
   - match: '^https?:\/\/m\.360buyimg\.com\/mobilecms\/s1125x2436_jfs'
@@ -114,7 +131,7 @@ scriptings:
 
   - http_request:
       name: "[京东比价] 慢慢买拦截提示"
-      match: '^https?:\/\/(?:apapia-[^\/]+|app|api)\.manmanbuy\.com\/'
+      match: '^https?:\/\/(?:[a-zA-Z0-9-]+\.)?manmanbuy\.com\/'
       script_url: "https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js"
       body_required: false
       timeout: 60
@@ -155,6 +172,9 @@ mitm:
     - api.m.jd.com
     - in.m.jd.com
     - apapia-sqk-weblogic.manmanbuy.com
+    - apapia-history-weblogic.manmanbuy.com
+    - app.manmanbuy.com
+    - api.manmanbuy.com
     - "*.manmanbuy.com"
     - manmanbuy.com
     - m.360buyimg.com

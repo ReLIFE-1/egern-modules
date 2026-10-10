@@ -5,21 +5,19 @@
 #!category=去广告
 #!system=iOS
 
-[Argument]
-Manmanbuy-Cookie = switch, true, false, tag = [京东比价]获取慢慢买 Cookie, desc = 首次使用请先打开【慢慢买】APP，提示【获取ck成功🎉】即可正常比价。
-JDPrice-TitleEmbed = switch, false, true, tag = [京东比价]标题嵌入版, desc = 点击商品标题即可直接查看嵌入式历史价格
-JDPrice-DetailNotify = switch, false, true, tag = [京东比价]详情通知版, desc = 点击商品详情页通过弹窗通知查看历史价格
-JDPrice-DetailEmbed-Table = switch, true, false, tag = [京东比价]详情嵌入版（表格图）, desc = 点击商品详情页即可直接查看嵌入式历史价格
-JDPrice-DetailEmbed-Line = switch, false, true, tag = [京东比价]详情嵌入版（折线图）, desc = 点击商品详情页即可直接查看嵌入式历史价格
-
 [Rule]
 # 拦截调试与诊断广告域名
-URL-REGEX,^http:\/\/\\w{32}\.jddebug\.com\/diagnose\?,REJECT
+URL-REGEX,^http:\/\/\w{32}\.jddebug\.com\/diagnose\?,REJECT
 # 拦截 HTTPDNS，强制走标准域名解析以确保 MITM 拦截生效
 DOMAIN,httpdns.alicdn.com,REJECT
 DOMAIN,httpdns-sdk.alicdn.com,REJECT
 DOMAIN,httpdns.push.qq.com,REJECT
 DOMAIN,httpdns.dlied1.qq.com,REJECT
+DOMAIN,httpdns.baidubce.com,REJECT
+DOMAIN,dns.alidns.com,REJECT
+DOMAIN,doh.pub,REJECT
+IP-CIDR,203.107.1.1/24,REJECT,no-resolve
+IP-CIDR,119.29.29.29/32,REJECT,no-resolve
 
 [URL Rewrite]
 # 开屏大图与轻量广告直接拦截
@@ -36,7 +34,7 @@ jd_clean = type=http-response, pattern=^https?:\/\/api\.m\.jd\.com\/client\.acti
 jd_price_cookie = type=http-request, pattern=^https?:\/\/apapia-sqk-weblogic\.manmanbuy\.com\/baoliao\/center\/menu, script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js, requires-body=true, max-size=-1, timeout=60
 
 # 京东比价 - 慢慢买拦截提示（捕获任意请求提示正在获取，无需 body）
-jd_price_cookie_start = type=http-request, pattern=^https?:\/\/(?:apapia-[^\/]+|app|api)\.manmanbuy\.com\/, script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js, timeout=60
+jd_price_cookie_start = type=http-request, pattern=^https?:\/\/(?:[a-zA-Z0-9-]+\.)?manmanbuy\.com\/, script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js, timeout=60
 
 # 京东比价 - 标题嵌入版
 jd_price_title = type=http-response, pattern=^https?:\/\/api\.m\.jd\.com\/client\.action\?functionId=(wareBusiness|serverConfig|basicConfig), script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js, requires-body=true, max-size=-1, timeout=60
@@ -51,4 +49,4 @@ jd_price_embed = type=http-response, pattern=^https?:\/\/in\.m\.jd\.com\/product
 jd_price_chart = type=http-response, pattern=^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html, script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_chart.js, requires-body=true, max-size=-1, timeout=60
 
 [MITM]
-hostname = %APPEND% api.m.jd.com, in.m.jd.com, apapia-sqk-weblogic.manmanbuy.com, *.manmanbuy.com, manmanbuy.com, m.360buyimg.com
+hostname = %APPEND% api.m.jd.com, in.m.jd.com, apapia-sqk-weblogic.manmanbuy.com, apapia-history-weblogic.manmanbuy.com, app.manmanbuy.com, api.manmanbuy.com, *.manmanbuy.com, manmanbuy.com, m.360buyimg.com
