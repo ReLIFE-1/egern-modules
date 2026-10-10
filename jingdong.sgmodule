@@ -6,9 +6,7 @@
 #!system=iOS
 
 [Rule]
-# 拦截调试与诊断广告域名
 URL-REGEX,^http:\/\/\w{32}\.jddebug\.com\/diagnose\?,REJECT
-# 拦截 HTTPDNS，强制走标准域名解析以确保 MITM 拦截生效
 DOMAIN,httpdns.alicdn.com,REJECT
 DOMAIN,httpdns-sdk.alicdn.com,REJECT
 DOMAIN,httpdns.push.qq.com,REJECT
@@ -20,33 +18,32 @@ IP-CIDR,203.107.1.1/24,REJECT,no-resolve
 IP-CIDR,119.29.29.29/32,REJECT,no-resolve
 
 [URL Rewrite]
-# 开屏大图与轻量广告直接拦截
 ^https?:\/\/m\.360buyimg\.com\/mobilecms\/s1125x2436_jfs - reject-200
 ^https?:\/\/api\.m\.jd\.com\/\?loginType=11 - reject-dict
 ^https?:\/\/api\.m\.jd\.com\/client\.action\?functionId=getWidgetV1052 - reject
 ^https:\/\/api\.m\.jd\.com\/client\.action\?functionId=(?:cartCouponRecommendGoods|intelligentRecommendSku|obtainGrowingInfo|recommendShop|searchBoxWord|stationPullService|uniformRecommend) - reject-dict
 
 [Script]
-# 响应体深度净化（首页横幅、浮窗推广、物流动图、订单与个人中心营销等）
-jd_clean = type=http-response, pattern=^https?:\/\/api\.m\.jd\.com\/client\.action\?functionId=(?:deliverLayer|getTabHomeInfo|myOrderInfo|orderTrackBusiness|personinfoBusiness|start|welcomeHome|basicConfig|cart|lite_advertising), script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jingdong.js, requires-body=true, max-size=-1, timeout=60
+# 京东去广告
+jd_clean = type=http-response, pattern=^https?:\/\/api\.m\.jd\.com\/client\.action\?functionId=(?:deliverLayer|getTabHomeInfo|myOrderInfo|orderTrackBusiness|personinfoBusiness|start|welcomeHome|basicConfig|cart|lite_advertising), script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jingdong.js?v=2.2.0, requires-body=true, max-size=-1, timeout=60
 
-# 京东比价 - 获取慢慢买 Cookie（监听底栏【我的】获取设备凭证）
-jd_price_cookie = type=http-request, pattern=^https?:\/\/apapia-sqk-weblogic\.manmanbuy\.com\/baoliao\/center\/menu, script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js, requires-body=true, max-size=-1, timeout=60
+# 京东比价 - 获取慢慢买 Cookie (监听底栏【我的】获取设备凭证)
+jd_price_cookie = type=http-request, pattern=^https?:\/\/apapia-sqk-weblogic\.manmanbuy\.com\/baoliao\/center\/menu, script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js?v=2.2.0, requires-body=true, max-size=-1, timeout=60
 
-# 京东比价 - 慢慢买拦截提示（捕获任意请求提示正在获取，无需 body）
-jd_price_cookie_start = type=http-request, pattern=^https?:\/\/(?:[a-zA-Z0-9-]+\.)?manmanbuy\.com\/, script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js, timeout=60
+# 京东比价 - 慢慢买拦截提示 (探针：捕获任意请求提示正在监听，无需 body)
+jd_price_cookie_start = type=http-request, pattern=^https?:\/\/(?:[a-zA-Z0-9-]+\.)?manmanbuy\.com\/, script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js?v=2.2.0, timeout=60
 
 # 京东比价 - 标题嵌入版
-jd_price_title = type=http-response, pattern=^https?:\/\/api\.m\.jd\.com\/client\.action\?functionId=(wareBusiness|serverConfig|basicConfig), script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js, requires-body=true, max-size=-1, timeout=60
+jd_price_title = type=http-response, pattern=^https?:\/\/api\.m\.jd\.com\/client\.action\?functionId=(wareBusiness|serverConfig|basicConfig), script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js?v=2.2.0, requires-body=true, max-size=-1, timeout=60
 
 # 京东比价 - 详情通知版
-jd_price_notify = type=http-request, pattern=^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html, script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js, timeout=60
+jd_price_notify = type=http-request, pattern=^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html, script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js?v=2.2.0, timeout=60
 
-# 京东比价 - 详情页历史价格比价（表格图版，默认启用）
-jd_price_embed = type=http-response, pattern=^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html, script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js, requires-body=true, max-size=-1, timeout=60
+# 京东比价 - 详情嵌入版（表格图）
+jd_price_embed = type=http-response, pattern=^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html, script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js?v=2.2.0, requires-body=true, max-size=-1, timeout=60
 
-# 京东比价 - 详情页历史价格比价（折线图版）
-jd_price_chart = type=http-response, pattern=^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html, script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_chart.js, requires-body=true, max-size=-1, timeout=60
+# 京东比价 - 详情嵌入版（折线图）
+jd_price_chart = type=http-response, pattern=^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html, script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_chart.js?v=2.2.0, requires-body=true, max-size=-1, timeout=60
 
 [MITM]
 hostname = %APPEND% api.m.jd.com, in.m.jd.com, apapia-sqk-weblogic.manmanbuy.com, apapia-history-weblogic.manmanbuy.com, app.manmanbuy.com, api.manmanbuy.com, *.manmanbuy.com, manmanbuy.com, m.360buyimg.com
