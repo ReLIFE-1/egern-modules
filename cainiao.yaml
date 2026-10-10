@@ -1,0 +1,73 @@
+name: 菜鸟App去广告
+description: 去除菜鸟App开屏广告、首页大横幅与瀑布流、搜索栏热词、个人中心营销推广、问卷弹窗等
+author: ReLIFE-1
+icon: https://fastly.jsdelivr.net/gh/zirawell/R-Store@main/Res/Icon/App/cainiao.png
+
+# 1. HTTPS 中间人解密（去广告必需）
+mitm:
+  hostnames:
+    includes:
+      - "cn-acs.m.cainiao.com"
+      - "guide-acs.m.cainiao.com"
+      - "trade-acs.m.cainiao.com"
+      - "e2e-mtop.cainiao.com"
+      - "nbcps-mtop.cainiao.com"
+      - "netflow-mtop.cainiao.com"
+      - "longquan-mtop.cainiao.com"
+      - "guide-acs.m.taobao.com"
+
+# 2. 域名分流规则（拦截广告打点与阿里 HTTPDNS）
+rules:
+  # 阻止阿里 HTTPDNS 调度，强制走系统本地 DNS 解析，确保 MITM 解密稳定生效
+  - type: domain
+    match: amdc.m.taobao.com
+    policy: REJECT
+  # 阿里/高德广告打点与日志追踪
+  - type: domain
+    match: adashx.m.taobao.com
+    policy: REJECT
+  - type: domain
+    match: optimus-ads.amap.com
+    policy: REJECT
+  - type: domain
+    match: eco.taobao.com
+    policy: REJECT
+
+# 3. URL 快速重写拦截（直接阻断纯广告请求）
+url_rewrites:
+  # 开屏广告与多格广告位
+  - match: ^https?:\/\/(cn-acs\.m|netflow-mtop)\.cainiao\.com\/gw\/mtop\.cainiao\.guoguo\.nbnetflow\.ads\.(show|mshow|index)
+    location: http://reject-dict/
+
+  # 搜索栏滚动热词与推广词
+  - match: ^https?:\/\/cn-acs\.m\.cainiao\.com\/gw\/mtop\.cainiao\.adkeyword\.get
+    location: http://reject-dict/
+
+  # 首页瀑布流及运营推广流
+  - match: ^https?:\/\/(cn-acs\.m|nbcps-mtop)\.cainiao\.com\/gw\/mtop\.cainiao\.nbcps\.presentation\.fetch
+    location: http://reject-dict/
+
+  # 底栏营销小红点与活动推广
+  - match: ^https?:\/\/cn-acs\.m\.cainiao\.com\/gw\/mtop\.cainiao\.nbpresentation\.tabbar\.marketing\.get
+    location: http://reject-dict/
+
+  # 调研问卷与弹窗提示
+  - match: ^https?:\/\/cn-acs\.m\.cainiao\.com\/gw\/mtop\.cainiao\.nbmensa\.research\.researchservice\.(acquire|event|close)
+    location: http://reject-dict/
+
+  # 小程序 CPC 推广
+  - match: ^https?:\/\/cn-acs\.m\.cainiao\.com\/gw\/mtop\.cainiao\.nbopen\.miniapp\.recommend\.cpc
+    location: http://reject-dict/
+
+  # 活动中心与积分商城推广
+  - match: ^https?:\/\/cn-acs\.m\.cainiao\.com\/gw\/mtop\.com\.cainiao\.(cnactivitycenter|cncreditmarket\.hit\.getactivityhit)
+    location: http://reject-dict/
+
+# 4. 响应体脚本重写（剥离首页与个人中心内的广告元素，保留包裹信息）
+scriptings:
+  - http_response:
+      name: Cainiao Homepage & Profile Clean
+      match: ^https?:\/\/(cn-acs\.m|guide-acs\.m|trade-acs\.m|e2e-mtop)\.(cainiao|taobao)\.com\/gw\/mtop\.cainiao\.(nbpresentation\.protocol\.homepage|nbpresentation\.homepage\.merge|app\.e2e\.engine)
+      script_url: https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/cainiao.js
+      body_required: true
+      update_interval: 86400
