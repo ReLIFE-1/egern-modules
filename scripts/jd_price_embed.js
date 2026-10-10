@@ -49,9 +49,18 @@ const url = $request.url;
 $.version = $.getdata('mmb_v') || 'V1'
 
 if (url.includes(path2)) {
-    const reqbody = $request.body
-    $.setdata(reqbody, manmanbuy_key);
-    $.msg($.name, '获取ck成功🎉', reqbody);
+    const reqbody = $request.body;
+    if (reqbody) {
+        $.setdata(reqbody, manmanbuy_key);
+        try {
+            const params = new URLSearchParams(reqbody);
+            const devId = params.get('c_mmbDevId');
+            if (devId) $.setdata(devId, "慢慢买CK");
+        } catch (e) {}
+        $.msg($.name, '获取ck成功🎉', '慢慢买 Cookie 获取成功，现在可以在京东查看历史比价');
+    }
+    $done({});
+    return;
 }
 
 if (url.includes(path1)) {
@@ -66,6 +75,8 @@ if (url.includes(path1)) {
                 });
             }
         )
+} else {
+    $done({});
 }
 
 async function main() {
