@@ -6,6 +6,9 @@
   const Storage = {
     get: function (key) {
       try {
+        if (typeof ctx !== "undefined" && ctx?.storage?.get) {
+          return ctx.storage.get(key);
+        }
         if (typeof $persistentStore !== "undefined" && $persistentStore.read) {
           return $persistentStore.read(key);
         }
@@ -17,6 +20,10 @@
     },
     set: function (key, val) {
       try {
+        if (typeof ctx !== "undefined" && ctx?.storage?.set) {
+          ctx.storage.set(key, String(val));
+          return true;
+        }
         if (typeof $persistentStore !== "undefined" && $persistentStore.write) {
           return $persistentStore.write(String(val), key);
         }
@@ -313,7 +320,7 @@
   }
 
   // 主流程处理
-  const req = typeof $request !== "undefined" ? $request : null;
+  const req = typeof $request !== "undefined" ? $request : (typeof ctx !== "undefined" && ctx?.request ? ctx.request : null);
   if (!req || !req.url) {
     if (typeof $done === "function") $done({});
     return;
@@ -343,7 +350,7 @@
         Storage.set("mmb_ck", `c_mmbDevId=${devId}`);
 
         const lastSuccessNotify = parseInt(Storage.get("MMB_LAST_SUCCESS_TIME") || "0", 10);
-        if (devId !== savedCK || (now - lastSuccessNotify > 15000)) {
+        if (devId !== savedCK || (now - lastSuccessNotify > 5000)) {
           Storage.set("MMB_LAST_SUCCESS_TIME", String(now));
           Notify(
             "🎉 慢慢买：获取CK成功",
@@ -352,9 +359,9 @@
           );
         }
       } else {
-        // 未捕获到 devId 时的友好提示（仅当本地尚无有效 CK 时触发，8 秒防抖）
+        // 未捕获到 devId 时的友好提示（5 秒防抖，每次测试都可见反馈）
         const lastNotify = parseInt(Storage.get("MMB_START_NOTIFY_TIME") || "0", 10);
-        if (!savedCK && (now - lastNotify > 8000)) {
+        if (now - lastNotify > 5000) {
           Storage.set("MMB_START_NOTIFY_TIME", String(now));
           const pathName = url.split("?")[0].replace(/https?:\/\/[^\/]+/, "");
           Notify(
