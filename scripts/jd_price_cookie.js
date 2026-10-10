@@ -63,77 +63,98 @@ const $http = (op, t = 4) => {
   
 
 if (url.includes("manmanbuy.com")) {
-    if (url.match(/\.(?:png|jpg|jpeg|gif|webp|svg|css|ico|woff|woff2)$/i)) {
-        $done({});
-        return;
-    }
+    try {
+        if (url.match(/\.(?:png|jpg|jpeg|gif|webp|svg|css|ico|woff|woff2)$/i)) {
+            $done({});
+            return;
+        }
 
-    const savedCK = $.getdata("慢慢买CK");
-    const pathName = url.split('?')[0].replace(/https?:\/\/[^\/]+/, '');
+        const safeNotify = (title, subtitle, body) => {
+            console.log(`[慢慢买比价] ${title} - ${subtitle}: ${body}`);
+            try {
+                if (typeof $notification !== 'undefined' && typeof $notification.post === 'function') {
+                    $notification.post(title, subtitle, body);
+                } else if (typeof $notify === 'function') {
+                    $notify(title, subtitle, body);
+                } else if (typeof ctx !== 'undefined' && typeof ctx.notify === 'function') {
+                    ctx.notify(title, subtitle, body);
+                } else {
+                    $.msg(title, subtitle, body);
+                }
+            } catch (err) {
+                try { $.msg(title, subtitle, body); } catch (_) {}
+            }
+        };
 
-    // 提取 devId（多源兜底：Body / URL / Headers）
-    let devId = null;
-    let reqbody = $request.body || '';
+        const savedCK = $.getdata("慢慢买CK");
+        const pathName = url.split('?')[0].replace(/https?:\/\/[^\/]+/, '');
 
-    if (reqbody) {
-        try {
-            const params = new URLSearchParams(reqbody);
-            devId = params.get('c_mmbDevId') || params.get('c_mmbdevid');
-        } catch (e) {}
+        // 提取 devId（多源兜底：Body / URL / Headers）
+        let devId = null;
+        let reqbody = $request.body || '';
+
+        if (reqbody) {
+            try {
+                const params = new URLSearchParams(reqbody);
+                devId = params.get('c_mmbDevId') || params.get('c_mmbdevid');
+            } catch (e) {}
+
+            if (!devId) {
+                try {
+                    const json = JSON.parse(reqbody);
+                    devId = json?.c_mmbDevId || json?.c_mmbdevid || json?.devId || json?.deviceId;
+                } catch (e) {}
+            }
+
+            if (!devId && typeof reqbody === 'string') {
+                const m = reqbody.match(/c_mmbDevId=([^&"\s]+)/i);
+                if (m) devId = m[1];
+            }
+        }
 
         if (!devId) {
             try {
-                const json = JSON.parse(reqbody);
-                devId = json?.c_mmbDevId || json?.c_mmbdevid || json?.devId || json?.deviceId;
+                const m = url.match(/[?&]c_mmbDevId=([^&"\s]+)/i);
+                if (m) devId = m[1];
             } catch (e) {}
         }
 
-        if (!devId && typeof reqbody === 'string') {
-            const m = reqbody.match(/c_mmbDevId=([^&"\s]+)/i);
-            if (m) devId = m[1];
-        }
-    }
-
-    if (!devId) {
-        try {
-            const m = url.match(/[?&]c_mmbDevId=([^&"\s]+)/i);
-            if (m) devId = m[1];
-        } catch (e) {}
-    }
-
-    if (!devId && $request.headers) {
-        for (const [k, v] of Object.entries($request.headers)) {
-            if (typeof v === 'string' && /c_mmbdevid/i.test(v)) {
-                const m = v.match(/c_mmbDevId=([^;&\s]+)/i);
-                if (m) { devId = m[1]?.trim(); break; }
+        if (!devId && $request.headers) {
+            for (const [k, v] of Object.entries($request.headers)) {
+                if (typeof v === 'string' && /c_mmbdevid/i.test(v)) {
+                    const m = v.match(/c_mmbDevId=([^;&\s]+)/i);
+                    if (m) { devId = m[1]?.trim(); break; }
+                }
             }
         }
-    }
 
-    const now = Date.now();
-    if (devId) {
-        const lastSuccessNotify = parseInt($.getdata("MMB_LAST_SUCCESS_TIME") || "0", 10);
-        $.setdata(devId, "慢慢买CK");
-        if (reqbody && /c_mmbDevId=/i.test(reqbody)) {
-            $.setdata(reqbody, manmanbuy_key);
+        const now = Date.now();
+        if (devId) {
+            const lastSuccessNotify = parseInt($.getdata("MMB_LAST_SUCCESS_TIME") || "0", 10);
+            $.setdata(devId, "慢慢买CK");
+            if (reqbody && /c_mmbDevId=/i.test(reqbody)) {
+                $.setdata(reqbody, manmanbuy_key);
+            } else {
+                $.setdata(`c_mmbDevId=${devId}`, manmanbuy_key);
+            }
+            if (devId !== savedCK || (now - lastSuccessNotify > 15000)) {
+                $.setdata(String(now), "MMB_LAST_SUCCESS_TIME");
+                safeNotify($.name, '获取ck成功🎉', `慢慢买凭证获取成功！\n设备ID: ${devId}\n现在可以进入京东App正常比价了。`);
+            }
         } else {
-            $.setdata(`c_mmbDevId=${devId}`, manmanbuy_key);
+            // 若尚未成功获取过 CK，弹窗通知告知用户网络请求已成功被 Egern 拦截，指导点击【我的】
+            // 8秒防抖，防止 App 启动多个请求并发导致连续弹窗轰炸
+            const lastNotify = parseInt($.getdata("MMB_START_NOTIFY_TIME") || "0", 10);
+            if (!savedCK && (now - lastNotify > 8000)) {
+                $.setdata(String(now), "MMB_START_NOTIFY_TIME");
+                safeNotify($.name, '🔔 慢慢买：已拦截请求，正在提取凭证...', `捕获路径: ${pathName}\n已成功拦截慢慢买请求，正在提取凭证！\n请在慢慢买 App 内点击底栏【我的】。`);
+            }
         }
-        if (devId !== savedCK || (now - lastSuccessNotify > 20000)) {
-            $.setdata(String(now), "MMB_LAST_SUCCESS_TIME");
-            $.msg($.name, '获取ck成功🎉', `慢慢买凭证获取成功！\n设备ID: ${devId}\n现在可以进入京东App正常比价了。`);
-        }
-    } else {
-        // 若尚未成功获取过 CK，弹窗通知告知用户网络请求已成功被 Egern 拦截，指导点击【我的】
-        // 10秒防抖，防止 App 启动多个请求并发导致连续弹窗轰炸
-        const lastNotify = parseInt($.getdata("MMB_START_NOTIFY_TIME") || "0", 10);
-        if (!savedCK && (now - lastNotify > 10000)) {
-            $.setdata(String(now), "MMB_START_NOTIFY_TIME");
-            $.msg($.name, '🔔 慢慢买：已拦截请求，正在提取凭证...', `捕获路径: ${pathName}\n已成功拦截慢慢买请求，正在提取凭证！\n请在慢慢买 App 内点击底栏【我的】。`);
-        }
+    } catch (e) {
+        console.log(`[慢慢买捕获异常] ${e}`);
+    } finally {
+        $done({});
     }
-
-    $done({});
     return;
 }
 
