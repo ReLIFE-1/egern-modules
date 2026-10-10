@@ -34,25 +34,28 @@ IP-CIDR, 119.29.29.29/32, REJECT, no-resolve
 
 [Script]
 # 京东去广告与深度净化
-http-response ^https:\/\/api\.m\.jd\.com\/client\.action\?functionId=(?:deliverLayer|getTabHomeInfo|myOrderInfo|orderTrackBusiness|personinfoBusiness|start|welcomeHome) script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jingdong.js, requires-body=true, timeout=60, tag=[京东]移除广告
+http-response ^https:\/\/api\.m\.jd\.com\/client\.action\?functionId=(?:deliverLayer|getTabHomeInfo|myOrderInfo|orderTrackBusiness|personinfoBusiness|start|welcomeHome) script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jingdong.js?v=2.2.0, requires-body=true, timeout=60, tag=[京东]移除广告
 
 # 京东极速版广告
-http-response ^https:\/\/api\.m\.jd\.com\/client\.action\?functionId=lite_advertising script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jingdong.js, requires-body=true, timeout=60, tag=[京东]移除京东极速版广告
+http-response ^https:\/\/api\.m\.jd\.com\/client\.action\?functionId=lite_advertising script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jingdong.js?v=2.2.0, requires-body=true, timeout=60, tag=[京东]移除京东极速版广告
 
-# 京东比价 - 获取慢慢买 Cookie (无条件自动从任意慢慢买请求提取凭证，包括登录、首页和个人中心)
-http-request ^https?:\/\/.*\.manmanbuy\.com script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js, requires-body=true, timeout=60, tag=[京东比价]获取慢慢买Cookie
+# 京东比价 - 获取慢慢买 Cookie (监听底栏【我的】获取设备凭证)
+http-request ^https?:\/\/apapia-sqk-weblogic\.manmanbuy\.com\/baoliao\/center\/menu script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js?v=2.2.0, requires-body=true, timeout=60, tag=[京东比价]获取慢慢买Cookie
+
+# 京东比价 - 慢慢买拦截提示 (探针：捕获任意请求提示正在监听，无需 body)
+http-request ^https?:\/\/.*\.manmanbuy\.com script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js?v=2.2.0, timeout=60, tag=[京东比价]慢慢买拦截提示
 
 # 京东比价 - 标题嵌入版
-http-response ^https?:\/\/api\.m\.jd\.com\/client\.action\?functionId=(wareBusiness|serverConfig|basicConfig) script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js, requires-body=true, timeout=60, tag=[京东比价]标题嵌入版, enable={JDPrice_TitleEmbed}
+http-response ^https?:\/\/api\.m\.jd\.com\/client\.action\?functionId=(wareBusiness|serverConfig|basicConfig) script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js?v=2.2.0, requires-body=true, timeout=60, tag=[京东比价]标题嵌入版, enable={JDPrice_TitleEmbed}
 
 # 京东比价 - 详情通知版
-http-request ^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js, timeout=60, tag=[京东比价]详情通知版, enable={JDPrice_DetailNotify}
+http-request ^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js?v=2.2.0, timeout=60, tag=[京东比价]详情通知版, enable={JDPrice_DetailNotify}
 
 # 京东比价 - 详情嵌入版（表格图）
-http-response ^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js, requires-body=true, timeout=60, tag=[京东比价]详情嵌入版（表格图）, enable={JDPrice_DetailEmbed_Table}
+http-response ^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js?v=2.2.0, requires-body=true, timeout=60, tag=[京东比价]详情嵌入版（表格图）, enable={JDPrice_DetailEmbed_Table}
 
 # 京东比价 - 详情嵌入版（折线图）
-http-response ^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_chart.js, requires-body=true, timeout=60, tag=[京东比价]详情嵌入版（折线图）, enable={JDPrice_DetailEmbed_Line}
+http-response ^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_chart.js?v=2.2.0, requires-body=true, timeout=60, tag=[京东比价]详情嵌入版（折线图）, enable={JDPrice_DetailEmbed_Line}
 
-[MitM]
+[MITM]
 hostname = api.m.jd.com, in.m.jd.com, apapia-sqk-weblogic.manmanbuy.com, apapia-history-weblogic.manmanbuy.com, app.manmanbuy.com, api.manmanbuy.com, *.manmanbuy.com, manmanbuy.com, m.360buyimg.com
