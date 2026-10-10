@@ -38,20 +38,23 @@ response if ${url} ~= /^https:\/\/api\.m\.jd\.com\/client\.action\?functionId=(?
 # 京东极速版广告
 response if ${url} ~= /^https:\/\/api\.m\.jd\.com\/client\.action\?functionId=lite_advertising/i then script("https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jingdong.js") with tag="[京东]移除京东极速版广告", requires_body=true
 
-# 京东比价 - 获取慢慢买 Cookie
-request if ${url} ~= /^https?:\/\/(?:[a-zA-Z0-9-]+\.)?manmanbuy\.com\//i then script("https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js") with enable=${Manmanbuy-Cookie}, tag="[京东比价]获取慢慢买Cookie", timeout=60, requires_body=true
+# 京东比价 - 获取慢慢买 Cookie (监听底栏【我的】获取设备凭证)
+request if ${url} ~= /^https?:\/\/apapia-sqk-weblogic\.manmanbuy\.com\/baoliao\/center\/menu/i then script("https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js") with enable={Manmanbuy-Cookie}, tag="[京东比价]获取慢慢买Cookie", timeout=60, requires_body=true
+
+# 京东比价 - 慢慢买启动拦截提示 (捕获任意请求并提示正在获取，无需 body)
+request if ${url} ~= /^https?:\/\/(?:apapia-[^\/]+|app|api)\.manmanbuy\.com\//i then script("https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js") with enable={Manmanbuy-Cookie}, tag="[京东比价]慢慢买拦截提示", timeout=60
 
 # 京东比价 - 标题嵌入版
-response if ${url} ~= /^https?:\/\/api\.m\.jd\.com\/client\.action\?functionId=(wareBusiness|serverConfig|basicConfig)/i then script("https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js") with enable=${JDPrice-TitleEmbed}, tag="[京东比价]标题嵌入版", requires_body=true
+response if ${url} ~= /^https?:\/\/api\.m\.jd\.com\/client\.action\?functionId=(wareBusiness|serverConfig|basicConfig)/i then script("https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js") with enable={JDPrice-TitleEmbed}, tag="[京东比价]标题嵌入版", requires_body=true
 
 # 京东比价 - 详情通知版
-request if ${url} ~= /^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html/i then script("https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js") with enable=${JDPrice-DetailNotify}, tag="[京东比价]详情通知版", timeout=60
+request if ${url} ~= /^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html/i then script("https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js") with enable={JDPrice-DetailNotify}, tag="[京东比价]详情通知版", timeout=60
 
 # 京东比价 - 详情嵌入版（表格图）
-response if ${url} ~= /^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html/i then script("https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js") with enable=${JDPrice-DetailEmbed-Table}, tag="[京东比价]详情嵌入版（表格图）", timeout=60, requires_body=true
+response if ${url} ~= /^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html/i then script("https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js") with enable={JDPrice-DetailEmbed-Table}, tag="[京东比价]详情嵌入版（表格图）", timeout=60, requires_body=true
 
 # 京东比价 - 详情嵌入版（折线图）
-response if ${url} ~= /^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html/i then script("https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_chart.js") with enable=${JDPrice-DetailEmbed-Line}, tag="[京东比价]详情嵌入版（折线图）", timeout=60, requires_body=true
+response if ${url} ~= /^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html/i then script("https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_chart.js") with enable={JDPrice-DetailEmbed-Line}, tag="[京东比价]详情嵌入版（折线图）", timeout=60, requires_body=true
 
 [MitM]
-hostname = api.m.jd.com, in.m.jd.com, *.manmanbuy.com, manmanbuy.com, m.360buyimg.com
+hostname = api.m.jd.com, in.m.jd.com, apapia-sqk-weblogic.manmanbuy.com, *.manmanbuy.com, manmanbuy.com, m.360buyimg.com
