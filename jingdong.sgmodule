@@ -5,6 +5,13 @@
 #!category=去广告
 #!system=iOS
 
+[Argument]
+Manmanbuy-Cookie = switch, true, false, tag = [京东比价]获取慢慢买 Cookie, desc = 首次使用请先打开【慢慢买】APP，提示【获取ck成功🎉】即可正常比价。
+JDPrice-TitleEmbed = switch, false, true, tag = [京东比价]标题嵌入版, desc = 点击商品标题即可直接查看嵌入式历史价格
+JDPrice-DetailNotify = switch, false, true, tag = [京东比价]详情通知版, desc = 点击商品详情页通过弹窗通知查看历史价格
+JDPrice-DetailEmbed-Table = switch, true, false, tag = [京东比价]详情嵌入版（表格图）, desc = 点击商品详情页即可直接查看嵌入式历史价格
+JDPrice-DetailEmbed-Line = switch, false, true, tag = [京东比价]详情嵌入版（折线图）, desc = 点击商品详情页即可直接查看嵌入式历史价格
+
 [Rule]
 # 拦截调试与诊断广告域名
 URL-REGEX,^http:\/\/\w{32}\.jddebug\.com\/diagnose\?,REJECT
@@ -20,13 +27,20 @@ URL-REGEX,^http:\/\/\w{32}\.jddebug\.com\/diagnose\?,REJECT
 # 响应体深度净化（首页横幅、浮窗推广、物流动图、订单与个人中心营销等）
 jd_clean = type=http-response, pattern=^https?:\/\/api\.m\.jd\.com\/client\.action\?functionId=(?:deliverLayer|getTabHomeInfo|myOrderInfo|orderTrackBusiness|personinfoBusiness|start|welcomeHome|basicConfig|cart|lite_advertising), script-path=https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jingdong.js, requires-body=true, max-size=-1, timeout=60
 
-# 京东比价 - 获取慢慢买 Cookie（首次使用请打开慢慢买 App 获取）
-jd_price_cookie = type=http-request, pattern=^https?:\/\/apapia-sqk-weblogic\.manmanbuy\.com\/baoliao\/center\/menu$, script-path=https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js, requires-body=true, max-size=-1, timeout=60
+# 京东比价 - 获取慢慢买 Cookie（首次使用请打开慢慢买 App 点击【我的】获取）
+jd_price_cookie = type=http-request, pattern=^https?:\/\/apapia-sqk-weblogic\.manmanbuy\.com\/baoliao\/center\/menu, script-path=https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js, requires-body=true, max-size=-1, timeout=60, enable=${Manmanbuy-Cookie}
 
-# 京东比价 - 详情页历史价格比价（默认启用表格图版；如需切换为折线图或通知版，注释此行并启用下方对应脚本即可）
-jd_price_embed = type=http-response, pattern=^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html, script-path=https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js, requires-body=true, max-size=-1, timeout=60
-# jd_price_chart = type=http-response, pattern=^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html, script-path=https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_chart.js, requires-body=true, max-size=-1, timeout=60
-# jd_price_notify = type=http-request, pattern=^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html, script-path=https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js, timeout=60
+# 京东比价 - 标题嵌入版
+jd_price_title = type=http-response, pattern=^https?:\/\/api\.m\.jd\.com\/client\.action\?functionId=(wareBusiness|serverConfig|basicConfig), script-path=https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js, requires-body=true, max-size=-1, timeout=60, enable=${JDPrice-TitleEmbed}
+
+# 京东比价 - 详情通知版
+jd_price_notify = type=http-request, pattern=^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html, script-path=https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js, timeout=60, enable=${JDPrice-DetailNotify}
+
+# 京东比价 - 详情页历史价格比价（表格图版，默认启用）
+jd_price_embed = type=http-response, pattern=^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html, script-path=https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js, requires-body=true, max-size=-1, timeout=60, enable=${JDPrice-DetailEmbed-Table}
+
+# 京东比价 - 详情页历史价格比价（折线图版）
+jd_price_chart = type=http-response, pattern=^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html, script-path=https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_chart.js, requires-body=true, max-size=-1, timeout=60, enable=${JDPrice-DetailEmbed-Line}
 
 [MITM]
-hostname = %APPEND% api.m.jd.com, in.m.jd.com, apapia-sqk-weblogic.manmanbuy.com, m.360buyimg.com
+hostname = %APPEND% api.m.jd.com, in.m.jd.com, apapia-sqk-weblogic.manmanbuy.com, *.manmanbuy.com, m.360buyimg.com
