@@ -25,16 +25,29 @@
 
 ---
 
-### 2. 京东 App 去广告与比价 (`jingdong.sgmodule`)
+### 2. 京东 App 去广告与比价 (`jingdong.sgmodule` / `jingdong.plugin`)
 
 <img src="https://fastly.jsdelivr.net/gh/sooyaaabo/IconLibrary@main/App/JingDong.png" width="48" height="48" alt="京东" />
 
-* **模块说明**：过滤京东开屏广告、首页营销与通栏推广、订单中心广告、个人中心横幅与红点，并支持商品历史价格比价（表格图/折线图）。
+* **模块说明**：过滤京东开屏广告、首页营销与通栏推广、订单中心广告、个人中心横幅与红点，支持商品历史价格比价（表格图 / 折线图 / 标题嵌入 / 通知版）。
 * **作者**：`ReLIFE-1`
-* **比价说明**：首次使用前请先打开【慢慢买】App，提示获取 Cookie 成功后即可正常比价；默认预设启用表格图嵌入比价。
+* **图形化开关支持**：支持在 Egern **编辑模块** 页面直接通过原生 UI 开关按需切换比价模式：
+  * `[京东比价]获取慢慢买 Cookie`（默认开启）
+  * `[京东比价]标题嵌入版`（默认关闭）
+  * `[京东比价]详情通知版`（默认关闭）
+  * `[京东比价]详情嵌入版（表格图）`（默认开启）
+  * `[京东比价]详情嵌入版（折线图）`（默认关闭）
+* **⚠️ 获取慢慢买 Cookie 必读**：
+  1. 首次比价前，请先打开【慢慢买】App 并点击底栏**【我的】**（仅打开首页不会触发个人中心菜单接口）。
+  2. 弹出系统通知提示【获取ck成功🎉】后，即可正常进入京东比价。
+  3. 必须确保 Egern CA 证书已在 iOS **设置 -> 通用 -> 关于本机 -> 证书信任设置** 中开启完全信任，且 Egern MITM 已启用。
 * **CDN 订阅链接（推荐）**：
   ```text
   https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/jingdong.sgmodule
+  ```
+* **Loon Plugin 格式订阅（兼容 Egern）**：
+  ```text
+  https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/jingdong.plugin
   ```
 * **GitHub 原始链接**：
   ```text
