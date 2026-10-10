@@ -1,7 +1,7 @@
 #!name=京东App去广告与比价
 #!desc=过滤京东开屏与信息流广告，支持商品历史价格查询（表格图/折线图/通知）。首次使用请先打开【慢慢买App-我的】提示获取CK成功后即可比价。此模块仅支持京东标准模式。
 #!author=ReLIFE-1
-#!icon=https://fastly.jsdelivr.net/gh/sooyaaabo/IconLibrary@main/App/JingDong.png
+#!icon=https://cdn.jsdelivr.net/gh/sooyaaabo/IconLibrary@main/App/JingDong.png
 #!category=去广告
 #!system=iOS
 
@@ -14,7 +14,12 @@ JDPrice-DetailEmbed-Line = switch, false, true, tag = [京东比价]详情嵌入
 
 [Rule]
 # 拦截调试与诊断广告域名
-URL-REGEX,^http:\/\/\w{32}\.jddebug\.com\/diagnose\?,REJECT
+URL-REGEX,^http:\/\/\\w{32}\.jddebug\.com\/diagnose\?,REJECT
+# 拦截 HTTPDNS，强制走标准域名解析以确保 MITM 拦截生效
+DOMAIN,httpdns.alicdn.com,REJECT
+DOMAIN,httpdns-sdk.alicdn.com,REJECT
+DOMAIN,httpdns.push.qq.com,REJECT
+DOMAIN,httpdns.dlied1.qq.com,REJECT
 
 [URL Rewrite]
 # 开屏大图与轻量广告直接拦截
@@ -25,22 +30,22 @@ URL-REGEX,^http:\/\/\w{32}\.jddebug\.com\/diagnose\?,REJECT
 
 [Script]
 # 响应体深度净化（首页横幅、浮窗推广、物流动图、订单与个人中心营销等）
-jd_clean = type=http-response, pattern=^https?:\/\/api\.m\.jd\.com\/client\.action\?functionId=(?:deliverLayer|getTabHomeInfo|myOrderInfo|orderTrackBusiness|personinfoBusiness|start|welcomeHome|basicConfig|cart|lite_advertising), script-path=https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jingdong.js, requires-body=true, max-size=-1, timeout=60
+jd_clean = type=http-response, pattern=^https?:\/\/api\.m\.jd\.com\/client\.action\?functionId=(?:deliverLayer|getTabHomeInfo|myOrderInfo|orderTrackBusiness|personinfoBusiness|start|welcomeHome|basicConfig|cart|lite_advertising), script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jingdong.js, requires-body=true, max-size=-1, timeout=60
 
 # 京东比价 - 获取慢慢买 Cookie（首次使用请打开慢慢买 App 点击【我的】获取）
-jd_price_cookie = type=http-request, pattern=^https?:\/\/apapia-sqk-weblogic\.manmanbuy\.com\/baoliao\/center\/menu, script-path=https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js, requires-body=true, max-size=-1, timeout=60, enable=${Manmanbuy-Cookie}
+jd_price_cookie = type=http-request, pattern=^https?:\/\/(?:[a-zA-Z0-9-]+\.)?manmanbuy\.com\/, script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js, requires-body=true, max-size=-1, timeout=60, enable=${Manmanbuy-Cookie}
 
 # 京东比价 - 标题嵌入版
-jd_price_title = type=http-response, pattern=^https?:\/\/api\.m\.jd\.com\/client\.action\?functionId=(wareBusiness|serverConfig|basicConfig), script-path=https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js, requires-body=true, max-size=-1, timeout=60, enable=${JDPrice-TitleEmbed}
+jd_price_title = type=http-response, pattern=^https?:\/\/api\.m\.jd\.com\/client\.action\?functionId=(wareBusiness|serverConfig|basicConfig), script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js, requires-body=true, max-size=-1, timeout=60, enable=${JDPrice-TitleEmbed}
 
 # 京东比价 - 详情通知版
-jd_price_notify = type=http-request, pattern=^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html, script-path=https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js, timeout=60, enable=${JDPrice-DetailNotify}
+jd_price_notify = type=http-request, pattern=^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html, script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js, timeout=60, enable=${JDPrice-DetailNotify}
 
 # 京东比价 - 详情页历史价格比价（表格图版，默认启用）
-jd_price_embed = type=http-response, pattern=^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html, script-path=https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js, requires-body=true, max-size=-1, timeout=60, enable=${JDPrice-DetailEmbed-Table}
+jd_price_embed = type=http-response, pattern=^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html, script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js, requires-body=true, max-size=-1, timeout=60, enable=${JDPrice-DetailEmbed-Table}
 
 # 京东比价 - 详情页历史价格比价（折线图版）
-jd_price_chart = type=http-response, pattern=^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html, script-path=https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_chart.js, requires-body=true, max-size=-1, timeout=60, enable=${JDPrice-DetailEmbed-Line}
+jd_price_chart = type=http-response, pattern=^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html, script-path=https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_chart.js, requires-body=true, max-size=-1, timeout=60, enable=${JDPrice-DetailEmbed-Line}
 
 [MITM]
-hostname = %APPEND% api.m.jd.com, in.m.jd.com, apapia-sqk-weblogic.manmanbuy.com, *.manmanbuy.com, m.360buyimg.com
+hostname = %APPEND% api.m.jd.com, in.m.jd.com, *.manmanbuy.com, manmanbuy.com, m.360buyimg.com
