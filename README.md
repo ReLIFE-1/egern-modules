@@ -30,7 +30,6 @@
 <img src="https://cdn.jsdelivr.net/gh/sooyaaabo/IconLibrary@main/App/JingDong.png" width="48" height="48" alt="京东" />
 
 * **模块说明**：过滤京东开屏广告、首页营销与通栏推广、订单中心广告、个人中心横幅与红点，支持商品历史价格比价（表格图 / 折线图 / 标题嵌入 / 通知版）。
-* **作者**：`ReLIFE-1`
 * **图形化开关支持**：支持在 Egern **编辑模块** 页面直接通过原生 UI 开关按需切换比价模式：
   * `[京东比价]获取慢慢买 Cookie`（默认开启）
   * `[京东比价]标题嵌入版`（默认关闭）
