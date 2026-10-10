@@ -1,19 +1,269 @@
-/*
- * 脚本名称：京东比价 折线图
- * 使用说明：进入APP商品详情页面触发。
- * 支持版本：App V15.0.80（自行测试）
- * 脚本作者：小白脸
- * 特别鸣谢：数据逆向@苍井灰灰
+// 京东比价（折线图嵌入版）
+// 深度重构版：完美兼容 Egern / Loon / Surge / Shadowrocket / Quantumult X
+// 具备完整异常防御、深浅色模式自适应与无凭证时友好页内引导
 
-[Script]
-慢慢买 CK = type=http-request,pattern=^https?:\/\/apapia-sqk-weblogic\.manmanbuy\.com/baoliao\/center\/menu,requires-body=1,max-size=0,binary-body-mode=0,script-path=https://raw.githubusercontent.com/githubdulong/Script/master/MmmCK.js
-京东比价 = type=http-response,pattern=^https:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html,requires-body=1,max-size=0,binary-body-mode=0,script-path=https://raw.githubusercontent.com/githubdulong/Script/master/jd_price.js,timeout=30
-[MITM]
-hostname = %APPEND% in.m.jd.com, apapia-sqk-weblogic.manmanbuy.com
-*/
+(function () {
+  const Storage = {
+    get: function (key) {
+      try {
+        if (typeof $persistentStore !== "undefined" && $persistentStore.read) {
+          return $persistentStore.read(key);
+        }
+        if (typeof $prefs !== "undefined" && $prefs.valueForKey) {
+          return $prefs.valueForKey(key);
+        }
+      } catch (_) {}
+      return null;
+    },
+    set: function (key, val) {
+      try {
+        if (typeof $persistentStore !== "undefined" && $persistentStore.write) {
+          return $persistentStore.write(String(val), key);
+        }
+        if (typeof $prefs !== "undefined" && $prefs.setValueForKey) {
+          return $prefs.setValueForKey(String(val), key);
+        }
+      } catch (_) {}
+      return false;
+    }
+  };
 
-const { $log, $msg, $prs, $http, md5, jsonToCustomString, jsonToQueryString } =
-  init();
+  const Notify = function (title, subtitle, body, opts) {
+    console.log(`[京东比价折线图] ${title} | ${subtitle}: ${body}`);
+    try {
+      if (typeof $notification !== "undefined" && typeof $notification.post === "function") {
+        $notification.post(title, subtitle, body, opts || {});
+        return;
+      }
+      if (typeof $notify === "function") {
+        $notify(title, subtitle, body, opts || {});
+        return;
+      }
+      if (typeof ctx !== "undefined" && typeof ctx.notify === "function") {
+        ctx.notify({ title: title, subtitle: subtitle, body: body });
+        return;
+      }
+    } catch (e) {
+      console.log(`[通知发送失败] ${e}`);
+    }
+  };
+
+  const HttpClient = {
+    post: function (options) {
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error("HTTP request timeout")), options.timeout || 12000);
+        try {
+          if (typeof $httpClient !== "undefined" && $httpClient.post) {
+            $httpClient.post(options, (err, resp, body) => {
+              clearTimeout(timer);
+              if (err) reject(err);
+              else resolve({ status: resp?.status || resp?.statusCode, headers: resp?.headers, body: body });
+            });
+            return;
+          }
+          if (typeof $task !== "undefined" && $task.fetch) {
+            $task.fetch({ method: "POST", ...options }).then(
+              (resp) => {
+                clearTimeout(timer);
+                resolve({ status: resp.statusCode, headers: resp.headers, body: resp.body });
+              },
+              (err) => {
+                clearTimeout(timer);
+                reject(err);
+              }
+            );
+            return;
+          }
+          clearTimeout(timer);
+          reject(new Error("No supported HTTP client found"));
+        } catch (e) {
+          clearTimeout(timer);
+          reject(e);
+        }
+      });
+    }
+  };
+
+  // 纯 JavaScript MD5
+  function md5(string) {
+    function rotateLeft(lValue, iShiftBits) {
+      return (lValue << iShiftBits) | (lValue >>> (32 - iShiftBits));
+    }
+    function addUnsigned(lX, lY) {
+      var lX4, lY4, lX8, lY8, lResult;
+      lX8 = lX & 0x80000000;
+      lY8 = lY & 0x80000000;
+      lX4 = lX & 0x40000000;
+      lY4 = lY & 0x40000000;
+      lResult = (lX & 0x3fffffff) + (lY & 0x3fffffff);
+      if (lX4 & lY4) return lResult ^ 0x80000000 ^ lX8 ^ lY8;
+      if (lX4 | lY4) {
+        if (lResult & 0x40000000) return lResult ^ 0xc0000000 ^ lX8 ^ lY8;
+        else return lResult ^ 0x40000000 ^ lX8 ^ lY8;
+      } else return lResult ^ lX8 ^ lY8;
+    }
+    function F(x, y, z) { return (x & y) | (~x & z); }
+    function G(x, y, z) { return (x & z) | (y & ~z); }
+    function H(x, y, z) { return x ^ y ^ z; }
+    function I(x, y, z) { return y ^ (x | ~z); }
+    function FF(a, b, c, d, x, s, ac) {
+      a = addUnsigned(a, addUnsigned(addUnsigned(F(b, c, d), x), ac));
+      return addUnsigned(rotateLeft(a, s), b);
+    }
+    function GG(a, b, c, d, x, s, ac) {
+      a = addUnsigned(a, addUnsigned(addUnsigned(G(b, c, d), x), ac));
+      return addUnsigned(rotateLeft(a, s), b);
+    }
+    function HH(a, b, c, d, x, s, ac) {
+      a = addUnsigned(a, addUnsigned(addUnsigned(H(b, c, d), x), ac));
+      return addUnsigned(rotateLeft(a, s), b);
+    }
+    function II(a, b, c, d, x, s, ac) {
+      a = addUnsigned(a, addUnsigned(addUnsigned(I(b, c, d), x), ac));
+      return addUnsigned(rotateLeft(a, s), b);
+    }
+    function convertToWordArray(str) {
+      var lWordCount;
+      var lMessageLength = str.length;
+      var lNumberOfWords_temp1 = lMessageLength + 8;
+      var lNumberOfWords_temp2 = (lNumberOfWords_temp1 - (lNumberOfWords_temp1 % 64)) / 64;
+      var lNumberOfWords = (lNumberOfWords_temp2 + 1) * 16;
+      var lWordArray = Array(lNumberOfWords - 1);
+      var lBytePosition = 0;
+      var lByteCount = 0;
+      while (lByteCount < lMessageLength) {
+        lWordCount = (lByteCount - (lByteCount % 4)) / 4;
+        lBytePosition = (lByteCount % 4) * 8;
+        lWordArray[lWordCount] = lWordArray[lWordCount] | (str.charCodeAt(lByteCount) << lBytePosition);
+        lByteCount++;
+      }
+      lWordCount = (lByteCount - (lByteCount % 4)) / 4;
+      lBytePosition = (lByteCount % 4) * 8;
+      lWordArray[lWordCount] = lWordArray[lWordCount] | (0x80 << lBytePosition);
+      lWordArray[lNumberOfWords - 2] = lMessageLength << 3;
+      lWordArray[lNumberOfWords - 1] = lMessageLength >>> 29;
+      return lWordArray;
+    }
+    function wordToHex(lValue) {
+      var WordToHexValue = "", WordToHexValue_temp = "", lByte, lCount;
+      for (lCount = 0; lCount <= 3; lCount++) {
+        lByte = (lValue >>> (lCount * 8)) & 255;
+        WordToHexValue_temp = "0" + lByte.toString(16);
+        WordToHexValue = WordToHexValue + WordToHexValue_temp.substr(WordToHexValue_temp.length - 2, 2);
+      }
+      return WordToHexValue;
+    }
+    function utf8Encode(str) {
+      str = str.replace(/\r\n/g, "\n");
+      var utftext = "";
+      for (var n = 0; n < str.length; n++) {
+        var c = str.charCodeAt(n);
+        if (c < 128) utftext += String.fromCharCode(c);
+        else if (c > 127 && c < 2048) {
+          utftext += String.fromCharCode((c >> 6) | 192);
+          utftext += String.fromCharCode((c & 63) | 128);
+        } else {
+          utftext += String.fromCharCode((c >> 12) | 224);
+          utftext += String.fromCharCode(((c >> 6) & 63) | 128);
+          utftext += String.fromCharCode((c & 63) | 128);
+        }
+      }
+      return utftext;
+    }
+    var x = Array();
+    var k, AA, BB, CC, DD, a, b, c, d;
+    var S11 = 7, S12 = 12, S13 = 17, S14 = 22;
+    var S21 = 5, S22 = 9, S23 = 14, S24 = 20;
+    var S31 = 4, S32 = 11, S33 = 16, S34 = 23;
+    var S41 = 6, S42 = 10, S43 = 15, S44 = 21;
+    string = utf8Encode(string);
+    x = convertToWordArray(string);
+    a = 0x67452301; b = 0xefcdab89; c = 0x98badcfe; d = 0x10325476;
+    for (k = 0; k < x.length; k += 16) {
+      AA = a; BB = b; CC = c; DD = d;
+      a = FF(a, b, c, d, x[k + 0], S11, 0xd76aa478);
+      d = FF(d, a, b, c, x[k + 1], S12, 0xe8c7b756);
+      c = FF(c, d, a, b, x[k + 2], S13, 0x242070db);
+      b = FF(b, c, d, a, x[k + 3], S14, 0xc1bdceee);
+      a = FF(a, b, c, d, x[k + 4], S11, 0xf57c0faf);
+      d = FF(d, a, b, c, x[k + 5], S12, 0x4787c62a);
+      c = FF(c, d, a, b, x[k + 6], S13, 0xa8304613);
+      b = FF(b, c, d, a, x[k + 7], S14, 0xfd469501);
+      a = FF(a, b, c, d, x[k + 8], S11, 0x698098d8);
+      d = FF(d, a, b, c, x[k + 9], S12, 0x8b44f7af);
+      c = FF(c, d, a, b, x[k + 10], S13, 0xffff5bb1);
+      b = FF(b, c, d, a, x[k + 11], S14, 0x895cd7be);
+      a = FF(a, b, c, d, x[k + 12], S11, 0x6b901122);
+      d = FF(d, a, b, c, x[k + 13], S12, 0xfd987193);
+      c = FF(c, d, a, b, x[k + 14], S13, 0xa679438e);
+      b = FF(b, c, d, a, x[k + 15], S14, 0x49b40821);
+      a = GG(a, b, c, d, x[k + 1], S21, 0xf61e2562);
+      d = GG(d, a, b, c, x[k + 6], S22, 0xc040b340);
+      c = GG(c, d, a, b, x[k + 11], S23, 0x265e5a51);
+      b = GG(b, c, d, a, x[k + 0], S24, 0xe9b6c7aa);
+      a = GG(a, b, c, d, x[k + 5], S21, 0xd62f105d);
+      d = GG(d, a, b, c, x[k + 10], S22, 0x2441453);
+      c = GG(c, d, a, b, x[k + 15], S23, 0xd8a1e681);
+      b = GG(b, c, d, a, x[k + 4], S24, 0xe7d3fbc8);
+      a = GG(a, b, c, d, x[k + 9], S21, 0x21e1cde6);
+      d = GG(d, a, b, c, x[k + 14], S22, 0xc33707d6);
+      c = GG(c, d, a, b, x[k + 3], S23, 0xf4d50d87);
+      b = GG(b, c, d, a, x[k + 8], S24, 0x455a14ed);
+      a = GG(a, b, c, d, x[k + 13], S21, 0xa9e3e905);
+      d = GG(d, a, b, c, x[k + 2], S22, 0xfcefa3f8);
+      c = GG(c, d, a, b, x[k + 7], S23, 0x676f02d9);
+      b = GG(b, c, d, a, x[k + 12], S24, 0x8d2a4c8a);
+      a = HH(a, b, c, d, x[k + 5], S31, 0xfffa3942);
+      d = HH(d, a, b, c, x[k + 8], S32, 0x8771f681);
+      c = HH(c, d, a, b, x[k + 11], S33, 0x6d9d6122);
+      b = HH(b, c, d, a, x[k + 14], S34, 0xfde5380c);
+      a = HH(a, b, c, d, x[k + 1], S31, 0xa4beea44);
+      d = HH(d, a, b, c, x[k + 4], S32, 0x4bdecfa9);
+      c = HH(c, d, a, b, x[k + 7], S33, 0xf6bb4b60);
+      b = HH(b, c, d, a, x[k + 10], S34, 0xbebfbc70);
+      a = HH(a, b, c, d, x[k + 13], S31, 0x289b7ec6);
+      d = HH(d, a, b, c, x[k + 0], S32, 0xeaa127fa);
+      c = HH(c, d, a, b, x[k + 3], S33, 0xd4ef3085);
+      b = HH(b, c, d, a, x[k + 6], S34, 0x4881d05);
+      a = HH(a, b, c, d, x[k + 9], S31, 0xd9d4d039);
+      d = HH(d, a, b, c, x[k + 12], S32, 0xe6db99e5);
+      c = HH(c, d, a, b, x[k + 15], S33, 0x1fa27cf8);
+      b = HH(b, c, d, a, x[k + 2], S34, 0xc4ac5665);
+      a = II(a, b, c, d, x[k + 0], S41, 0xf4292244);
+      d = II(d, a, b, c, x[k + 7], S42, 0x432aff97);
+      c = II(c, d, a, b, x[k + 14], S43, 0xab9423a7);
+      b = II(b, c, d, a, x[k + 5], S44, 0xfc93a039);
+      a = II(a, b, c, d, x[k + 12], S41, 0x655b59c3);
+      d = II(d, a, b, c, x[k + 3], S42, 0x8f0ccc92);
+      c = II(c, d, a, b, x[k + 10], S43, 0xffeff47d);
+      b = II(b, c, d, a, x[k + 1], S44, 0x85845dd1);
+      a = II(a, b, c, d, x[k + 8], S41, 0x6fa87e4f);
+      d = II(d, a, b, c, x[k + 15], S42, 0xfe2ce6e0);
+      c = II(c, d, a, b, x[k + 6], S43, 0xa3014314);
+      b = II(b, c, d, a, x[k + 13], S44, 0x4e0811a1);
+      a = II(a, b, c, d, x[k + 4], S41, 0xf7537e82);
+      d = II(d, a, b, c, x[k + 11], S42, 0xbd3af235);
+      c = II(c, d, a, b, x[k + 2], S43, 0x2ad7d2bb);
+      b = II(b, c, d, a, x[k + 9], S44, 0xeb86d391);
+      a = addUnsigned(a, AA); b = addUnsigned(b, BB); c = addUnsigned(c, CC); d = addUnsigned(d, DD);
+    }
+    var r = wordToHex(a) + wordToHex(b) + wordToHex(c) + wordToHex(d);
+    return r.toLowerCase();
+  }
+
+  function jsonToQueryString(jsonObject) {
+    return Object.keys(jsonObject)
+      .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(jsonObject[key])}`)
+      .join('&');
+  }
+
+  function jsonToCustomString(jsonObject) {
+    return Object.keys(jsonObject)
+      .filter(key => jsonObject[key] !== '' && key.toLowerCase() !== 'token')
+      .sort()
+      .map(key => `${key.toUpperCase()}${String(jsonObject[key]).toUpperCase()}`)
+      .join('');
+  }
 
 const JdLine = (data) => {
   return `
@@ -369,225 +619,129 @@ const JdLine = (data) => {
     </script>`;
 };
 
-const getMMdata = (id) => {
-  const getmmCK = () => {
-    const ck = $prs.get("慢慢买CK");
-    if (ck) return ck;
-    throw new Error("未获取 ck，请先打开【慢慢买】APP→我的，获取 ck");
-  };
+  async function getMMdata(id) {
+    const devId = Storage.get("慢慢买CK") || Storage.get("manmanbuy_val") || Storage.get("mmb_ck");
+    if (!devId) {
+      throw new Error("未检测到慢慢买凭证，请先打开【慢慢买】APP→我的");
+    }
 
-  const reqOpts = ({ url, buildBody, ...op }) => {
-    const opt = {
-      method: "post",
-      url,
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
-        "User-Agent":
-          "Mozilla/5.0 (iPhone; CPU iPhone OS 13_1_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 - mmbWebBrowse - ios",
-      },
-      ...op,
-    };
-    const cb = (args) => {
+    function signBody(args) {
       const reqBody = {
         t: Date.now().toString(),
         c_appver: "4.8.3.1",
-        c_mmbDevId: getmmCK(),
-        ...args,
+        c_mmbDevId: devId,
+        ...args
       };
       reqBody.token = md5(
         encodeURIComponent(
           "3E41D1331F5DDAFCD0A38FE2D52FF66F" +
-            jsonToCustomString(reqBody) +
-            "3E41D1331F5DDAFCD0A38FE2D52FF66F"
+          jsonToCustomString(reqBody) +
+          "3E41D1331F5DDAFCD0A38FE2D52FF66F"
         )
       ).toUpperCase();
       return jsonToQueryString(reqBody);
-    };
-    return { ...opt, body: buildBody(cb) };
-  };
-
-  const apiCall = (url, buildBody) =>
-    $http(reqOpts({ url, buildBody }))
-      .then((resp) => {
-        const body = resp.json();
-        if (!url.endsWith("trendData") && body.code !== 2000) throw new Error(`${url}：${body.msg}`);
-        return body;
-      });
-
-  return apiCall(
-            "https://apapia-history-weblogic.manmanbuy.com/basic/getItemBasicInfo",
-        (set) =>
-          set({
-            methodName: "getHistoryInfoJava",
-            searchKey: `https://item.jd.com/${id}.html`,
-          })
-      )
-    .then(({ result: { spbh, url } }) =>
-      apiCall(
-        "https://apapia-history-weblogic.manmanbuy.com/app/share",
-        (set) =>
-          set({
-            methodName: "trendJava",
-            spbh,
-            url,
-          })
-      )
-    )
-    .then(({ data }) =>
-      apiCall(
-        "https://apapia-history-weblogic.manmanbuy.com/h5/share/trendData",
-        () => data.split("?")[1]
-      )
-    );
-};
-
-const Render = {
-  inject(html) {
-    const { body } = $response;
-    $response.body = body.replace("<body>", `<body>${html}`);
-    return this;
-  },
-  done() {
-    const { body, headers } = $response;
-    $done({ body, headers });
-  },
-};
-
-const main = async () => {
-  try {
-    const ID = $request.url.match(/\d+/);
-    const { msg, code, result } = await getMMdata(ID);
-    if (code !== 2000) {
-      Render.inject(`<h2>${msg}</h2>`).done();
-      return;
     }
-    
-    const hour = new Date().getHours();
-    const isDark = hour >= 20 || hour < 6;
 
-    Render
-    .inject(JdLine(result))
-    .inject(`<script>isDark=${isDark}</script>`)
-    .done();
-  } catch (e) {
-    $log(e);
-    $msg(e);
-    $done({});
+    async function apiCall(url, postBody) {
+      const resp = await HttpClient.post({
+        url: url,
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
+          "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 - mmbWebBrowse - ios"
+        },
+        body: postBody
+      });
+      let json;
+      try {
+        json = typeof resp.body === "string" ? JSON.parse(resp.body) : resp.body;
+      } catch (e) {
+        throw new Error(`解析响应 JSON 失败: ${url}`);
+      }
+      return json;
+    }
+
+    // Step 1: 获取基本信息
+    const step1 = await apiCall(
+      "https://apapia-history-weblogic.manmanbuy.com/basic/getItemBasicInfo",
+      signBody({
+        methodName: "getHistoryInfoJava",
+        searchKey: `https://item.jd.com/${id}.html`
+      })
+    );
+    if (!step1 || step1.code !== 2000 || !step1.result) {
+      throw new Error(`获取商品基础信息失败: ${step1?.msg || "未知原因"}`);
+    }
+
+    // Step 2: 获取分享 trend 链接
+    const step2 = await apiCall(
+      "https://apapia-history-weblogic.manmanbuy.com/app/share",
+      signBody({
+        methodName: "trendJava",
+        spbh: step1.result.spbh,
+        url: step1.result.url
+      })
+    );
+    if (!step2 || !step2.data) {
+      throw new Error(`获取历史价格走势地址失败: ${step2?.msg || "未知原因"}`);
+    }
+
+    // Step 3: 获取真实 trend 数据
+    const queryString = step2.data.split("?")[1] || "";
+    const step3 = await apiCall(
+      "https://apapia-history-weblogic.manmanbuy.com/h5/share/trendData",
+      queryString
+    );
+    return step3;
   }
-};
 
-main();
+  (async function main() {
+    let respBody = typeof $response !== "undefined" && $response.body ? $response.body : "";
+    let headers = typeof $response !== "undefined" && $response.headers ? $response.headers : {};
+    try {
+      const url = typeof $request !== "undefined" && $request.url ? $request.url : "";
+      const idMatch = url.match(/\/product\/graphext\/(\d+)\.html/) || url.match(/(\d{6,})/);
+      const skuId = idMatch ? idMatch[1] : null;
 
-function init(){CryptoJS=function(t,r){var n;if("undefined"!=typeof window&&window.crypto&&(n=window.crypto),"undefined"!=typeof self&&self.crypto&&(n=self.crypto),"undefined"!=typeof globalThis&&globalThis.crypto&&(n=globalThis.crypto),!n&&"undefined"!=typeof window&&window.msCrypto&&(n=window.msCrypto),!n&&"undefined"!=typeof global&&global.crypto&&(n=global.crypto),!n&&"function"==typeof require)try{n=require("crypto")}catch(t){}var e=function(){if(n){if("function"==typeof n.getRandomValues)try{return n.getRandomValues(new Uint32Array(1))[0]}catch(t){}if("function"==typeof n.randomBytes)try{return n.randomBytes(4).readInt32LE()}catch(t){}}throw new Error("Native crypto module could not be used to get secure random number.")},i=Object.create||function(){function t(){}return function(r){var n;return t.prototype=r,n=new t,t.prototype=null,n}}(),o={},a=o.lib={},s=a.Base={extend:function(t){var r=i(this);return t&&r.mixIn(t),r.hasOwnProperty("init")&&this.init!==r.init||(r.init=function(){r.$super.init.apply(this,arguments)}),r.init.prototype=r,r.$super=this,r},create:function(){var t=this.extend();return t.init.apply(t,arguments),t},init:function(){},mixIn:function(t){for(var r in t)t.hasOwnProperty(r)&&(this[r]=t[r]);t.hasOwnProperty("toString")&&(this.toString=t.toString)},clone:function(){return this.init.prototype.extend(this)}},c=a.WordArray=s.extend({init:function(t,r){t=this.words=t||[],this.sigBytes=null!=r?r:4*t.length},toString:function(t){return(t||f).stringify(this)},concat:function(t){var r=this.words,n=t.words,e=this.sigBytes,i=t.sigBytes;if(this.clamp(),e%4)for(var o=0;o<i;o++){var a=n[o>>>2]>>>24-o%4*8&255;r[e+o>>>2]|=a<<24-(e+o)%4*8}else for(var s=0;s<i;s+=4)r[e+s>>>2]=n[s>>>2];return this.sigBytes+=i,this},clamp:function(){var r=this.words,n=this.sigBytes;r[n>>>2]&=4294967295<<32-n%4*8,r.length=t.ceil(n/4)},clone:function(){var t=s.clone.call(this);return t.words=this.words.slice(0),t},random:function(r){var n,i=[],o=function(r){r=r;var n=987654321,e=4294967295;return function(){var i=((n=36969*(65535&n)+(n>>16)&e)<<16)+(r=18e3*(65535&r)+(r>>16)&e)&e;return i/=4294967296,(i+=.5)*(t.random()>.5?1:-1)}},a=!1;try{e(),a=!0}catch(t){}for(var s,u=0;u<r;u+=4)a?i.push(e()):(s=987654071*(n=o(4294967296*(s||t.random())))(),i.push(4294967296*n()|0));return new c.init(i,r)}}),u=o.enc={},f=u.Hex={stringify:function(t){for(var r=t.words,n=t.sigBytes,e=[],i=0;i<n;i++){var o=r[i>>>2]>>>24-i%4*8&255;e.push((o>>>4).toString(16)),e.push((15&o).toString(16))}return e.join("")},parse:function(t){for(var r=t.length,n=[],e=0;e<r;e+=2)n[e>>>3]|=parseInt(t.substr(e,2),16)<<24-e%8*4;return new c.init(n,r/2)}},h=u.Latin1={stringify:function(t){for(var r=t.words,n=t.sigBytes,e=[],i=0;i<n;i++){var o=r[i>>>2]>>>24-i%4*8&255;e.push(String.fromCharCode(o))}return e.join("")},parse:function(t){for(var r=t.length,n=[],e=0;e<r;e++)n[e>>>2]|=(255&t.charCodeAt(e))<<24-e%4*8;return new c.init(n,r)}},p=u.Utf8={stringify:function(t){try{return decodeURIComponent(escape(h.stringify(t)))}catch(t){throw new Error("Malformed UTF-8 data")}},parse:function(t){return h.parse(unescape(encodeURIComponent(t)))}},d=a.BufferedBlockAlgorithm=s.extend({reset:function(){this._data=new c.init,this._nDataBytes=0},_append:function(t){"string"==typeof t&&(t=p.parse(t)),this._data.concat(t),this._nDataBytes+=t.sigBytes},_process:function(r){var n,e=this._data,i=e.words,o=e.sigBytes,a=this.blockSize,s=o/(4*a),u=(s=r?t.ceil(s):t.max((0|s)-this._minBufferSize,0))*a,f=t.min(4*u,o);if(u){for(var h=0;h<u;h+=a)this._doProcessBlock(i,h);n=i.splice(0,u),e.sigBytes-=f}return new c.init(n,f)},clone:function(){var t=s.clone.call(this);return t._data=this._data.clone(),t},_minBufferSize:0}),l=(a.Hasher=d.extend({cfg:s.extend(),init:function(t){this.cfg=this.cfg.extend(t),this.reset()},reset:function(){d.reset.call(this),this._doReset()},update:function(t){return this._append(t),this._process(),this},finalize:function(t){return t&&this._append(t),this._doFinalize()},blockSize:16,_createHelper:function(t){return function(r,n){return new t.init(n).finalize(r)}},_createHmacHelper:function(t){return function(r,n){return new l.HMAC.init(t,n).finalize(r)}}}),o.algo={});return o}(Math);!function(t){var r=CryptoJS,n=r.lib,e=n.WordArray,i=n.Hasher,o=r.algo,a=[];!function(){for(var r=0;r<64;r++)a[r]=4294967296*t.abs(t.sin(r+1))|0}();var s=o.MD5=i.extend({_doReset:function(){this._hash=new e.init([1732584193,4023233417,2562383102,271733878])},_doProcessBlock:function(t,r){for(var n=0;n<16;n++){var e=r+n,i=t[e];t[e]=16711935&(i<<8|i>>>24)|4278255360&(i<<24|i>>>8)}var o=this._hash.words,s=t[r+0],p=t[r+1],d=t[r+2],l=t[r+3],y=t[r+4],v=t[r+5],g=t[r+6],w=t[r+7],_=t[r+8],m=t[r+9],B=t[r+10],b=t[r+11],C=t[r+12],S=t[r+13],x=t[r+14],A=t[r+15],H=o[0],z=o[1],M=o[2],D=o[3];z=h(z=h(z=h(z=h(z=f(z=f(z=f(z=f(z=u(z=u(z=u(z=u(z=c(z=c(z=c(z=c(z,M=c(M,D=c(D,H=c(H,z,M,D,s,7,a[0]),z,M,p,12,a[1]),H,z,d,17,a[2]),D,H,l,22,a[3]),M=c(M,D=c(D,H=c(H,z,M,D,y,7,a[4]),z,M,v,12,a[5]),H,z,g,17,a[6]),D,H,w,22,a[7]),M=c(M,D=c(D,H=c(H,z,M,D,_,7,a[8]),z,M,m,12,a[9]),H,z,B,17,a[10]),D,H,b,22,a[11]),M=c(M,D=c(D,H=c(H,z,M,D,C,7,a[12]),z,M,S,12,a[13]),H,z,x,17,a[14]),D,H,A,22,a[15]),M=u(M,D=u(D,H=u(H,z,M,D,p,5,a[16]),z,M,g,9,a[17]),H,z,b,14,a[18]),D,H,s,20,a[19]),M=u(M,D=u(D,H=u(H,z,M,D,v,5,a[20]),z,M,B,9,a[21]),H,z,A,14,a[22]),D,H,y,20,a[23]),M=u(M,D=u(D,H=u(H,z,M,D,m,5,a[24]),z,M,x,9,a[25]),H,z,l,14,a[26]),D,H,_,20,a[27]),M=u(M,D=u(D,H=u(H,z,M,D,S,5,a[28]),z,M,d,9,a[29]),H,z,w,14,a[30]),D,H,C,20,a[31]),M=f(M,D=f(D,H=f(H,z,M,D,v,4,a[32]),z,M,_,11,a[33]),H,z,b,16,a[34]),D,H,x,23,a[35]),M=f(M,D=f(D,H=f(H,z,M,D,p,4,a[36]),z,M,y,11,a[37]),H,z,w,16,a[38]),D,H,B,23,a[39]),M=f(M,D=f(D,H=f(H,z,M,D,S,4,a[40]),z,M,s,11,a[41]),H,z,l,16,a[42]),D,H,g,23,a[43]),M=f(M,D=f(D,H=f(H,z,M,D,m,4,a[44]),z,M,C,11,a[45]),H,z,A,16,a[46]),D,H,d,23,a[47]),M=h(M,D=h(D,H=h(H,z,M,D,s,6,a[48]),z,M,w,10,a[49]),H,z,x,15,a[50]),D,H,v,21,a[51]),M=h(M,D=h(D,H=h(H,z,M,D,C,6,a[52]),z,M,l,10,a[53]),H,z,B,15,a[54]),D,H,p,21,a[55]),M=h(M,D=h(D,H=h(H,z,M,D,_,6,a[56]),z,M,A,10,a[57]),H,z,g,15,a[58]),D,H,S,21,a[59]),M=h(M,D=h(D,H=h(H,z,M,D,y,6,a[60]),z,M,b,10,a[61]),H,z,d,15,a[62]),D,H,m,21,a[63]),o[0]=o[0]+H|0,o[1]=o[1]+z|0,o[2]=o[2]+M|0,o[3]=o[3]+D|0},_doFinalize:function(){var r=this._data,n=r.words,e=8*this._nDataBytes,i=8*r.sigBytes;n[i>>>5]|=128<<24-i%32;var o=t.floor(e/4294967296),a=e;n[15+(i+64>>>9<<4)]=16711935&(o<<8|o>>>24)|4278255360&(o<<24|o>>>8),n[14+(i+64>>>9<<4)]=16711935&(a<<8|a>>>24)|4278255360&(a<<24|a>>>8),r.sigBytes=4*(n.length+1),this._process();for(var s=this._hash,c=s.words,u=0;u<4;u++){var f=c[u];c[u]=16711935&(f<<8|f>>>24)|4278255360&(f<<24|f>>>8)}return s},clone:function(){var t=i.clone.call(this);return t._hash=this._hash.clone(),t}});function c(t,r,n,e,i,o,a){var s=t+(r&n|~r&e)+i+a;return(s<<o|s>>>32-o)+r}function u(t,r,n,e,i,o,a){var s=t+(r&e|n&~e)+i+a;return(s<<o|s>>>32-o)+r}function f(t,r,n,e,i,o,a){var s=t+(r^n^e)+i+a;return(s<<o|s>>>32-o)+r}function h(t,r,n,e,i,o,a){var s=t+(n^(r|~e))+i+a;return(s<<o|s>>>32-o)+r}r.MD5=i._createHelper(s),r.HmacMD5=i._createHmacHelper(s)}(Math),function(){var t=CryptoJS,r=t.lib.WordArray;t.enc.Base64={stringify:function(t){var r=t.words,n=t.sigBytes,e=this._map;t.clamp();for(var i=[],o=0;o<n;o+=3)for(var a=(r[o>>>2]>>>24-o%4*8&255)<<16|(r[o+1>>>2]>>>24-(o+1)%4*8&255)<<8|r[o+2>>>2]>>>24-(o+2)%4*8&255,s=0;s<4&&o+.75*s<n;s++)i.push(e.charAt(a>>>6*(3-s)&63));var c=e.charAt(64);if(c)for(;i.length%4;)i.push(c);return i.join("")},parse:function(t){var n=t.length,e=this._map,i=this._reverseMap;if(!i){i=this._reverseMap=[];for(var o=0;o<e.length;o++)i[e.charCodeAt(o)]=o}var a=e.charAt(64);if(a){var s=t.indexOf(a);-1!==s&&(n=s)}return function(t,n,e){for(var i=[],o=0,a=0;a<n;a++)if(a%4){var s=e[t.charCodeAt(a-1)]<<a%4*2,c=e[t.charCodeAt(a)]>>>6-a%4*2;i[o>>>2]|=(s|c)<<24-o%4*8,o++}return r.create(i,o)}(t,n,i)},_map:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="}}();
-  
-function md5(word){return CryptoJS.MD5(word).toString();}
-  
-function jsonToQueryString(jsonObject) {return Object.keys(jsonObject).map(key => `${encodeURIComponent(key)}=${encodeURIComponent(jsonObject[key])}`).join('&');}
+      if (!skuId) {
+        return;
+      }
 
-function jsonToCustomString(jsonObject){return Object.keys(jsonObject).filter(key=>jsonObject[key]!==''&&key.toLowerCase()!=='token').sort().map(key=>`${key.toUpperCase()}${jsonObject[key].toUpperCase()}`).join('');}
-
-  Promise.withResolvers ||= function () {
-    let resolve, reject;
-    const promise = new this((res, rej) => {
-      resolve = res;
-      reject = rej;
-    });
-    return { promise, resolve, reject };
-  };
-
-  const $http = (op, t = 4) => {
-    const { promise, resolve, reject } = Promise.withResolvers();
-    const HTTPError = (e, req, res) =>
-      Object.assign(new Error(e), {
-        name: "HTTPError",
-        request: req,
-        response: res,
-      });
-
-    const handleRes = ({ bodyBytes, ...res }) => {
-      res.status ??= res.statusCode;
-      res.json = () => JSON.parse(res.body);
-      if (res.headers?.["binary-mode"] && bodyBytes)
-        res.body = new Uint8Array(bodyBytes);
-
-      res.error || res.status < 200 || res.status > 307
-        ? reject(HTTPError(res.error, op, res))
-        : resolve(res);
-    };
-
-    const timer = setTimeout(
-      () => reject(HTTPError("timeout", op)),
-      op.$timeout ?? t * 1000
-    );
-    this.$httpClient?.[op.method || "get"](op, (error, resp, body) => {
-      handleRes({ error, ...resp, body });
-    });
-    this.$task?.fetch({ url: op, ...op }).then(handleRes, handleRes);
-
-    return promise.finally(() => clearTimeout(timer));
-  };
-
-  const $prs = {
-    get: this.$prefs?.valueForKey ?? $persistentStore.read,
-    getJson: (key) => JSON.parse($prs.get(key), null, 4),
-    set: (key, value) =>
-      (this.$prefs?.setValueForKey ?? $persistentStore.write)(value, key),
-    setJson: (key, obj) => $prs.set(key, JSON.stringify(obj)),
-  };
-
-  const $msg = (...a) => {
-    const { $open, $copy, $media, ...r } =
-      typeof a.at(-1) === "object" && a.pop();
-    const [t = "", s = "", b = ""] = a;
-    (this.$notify ??= $notification.post)(t, s, b, {
-      action: $copy ? "clipboard" : "open-url",
-      text: $copy,
-      "update-pasteboard": $copy,
-      clipboard: $copy,
-      "open-url": $open,
-      openUrl: $open,
-      url: $open,
-      mediaUrl: $media,
-      "media-url": $media,
-      ...r,
-    });
-  };
-
-  const $log = new Proxy(
-    (...args) =>
-      args.forEach((i) =>
-        console.log(
-          i?.stack
-            ? `${i.toString()}\n${i.stack}`
-            : typeof i === "object"
-            ? JSON.stringify(i, null, 4)
-            : String(i)
-        )
-      ),
-    {
-      get(target) {
-        if (!target.init) {
-          target.time = (id) => (target.time[id] = Date.now());
-          target.timeEnd = (id) => target(Date.now() - target.time[id]);
-          target.show =
-            (...a) =>
-            (b) =>
-              b && target(...a);
-          target.init = true;
+      const devId = Storage.get("慢慢买CK") || Storage.get("manmanbuy_val") || Storage.get("mmb_ck");
+      if (!devId) {
+        const promptHtml = `
+          <div style="max-width:92%;margin:16px auto;padding:14px 16px;background:#FFF2F0;border:1px solid #FFCCC7;border-radius:10px;font-size:13px;color:#CF1322;line-height:1.6;box-shadow:0 2px 8px rgba(0,0,0,0.04);font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;">
+            <div style="font-weight:bold;font-size:14px;margin-bottom:4px;">⚠️ 未检测到慢慢买比价凭证</div>
+            <div>首次使用请先打开【慢慢买】App，点击底栏最右侧【我的】。<br>收到“🎉 慢慢买：获取CK成功”通知后，刷新此页即可查看历史价格走势图。</div>
+          </div>
+        `;
+        if (respBody && /<body[^>]*>/i.test(respBody)) {
+          respBody = respBody.replace(/<body[^>]*>/i, (m) => `${m}\n${promptHtml}`);
+        } else {
+          respBody = `${promptHtml}\n${respBody}`;
         }
+        return;
+      }
 
-        return Reflect.get(...arguments);
-      },
+      const data = await getMMdata(skuId);
+      if (data && data.code === 2000 && data.result) {
+        const hour = new Date().getHours();
+        const isDark = hour >= 20 || hour < 6;
+        const chartHtml = `${JdLine(data.result)}\n<script>var isDark=${isDark};</script>`;
+
+        if (respBody && /<body[^>]*>/i.test(respBody)) {
+          respBody = respBody.replace(/<body[^>]*>/i, (m) => `${m}\n${chartHtml}`);
+        } else {
+          respBody = `${chartHtml}\n${respBody}`;
+        }
+      } else {
+        console.log(`[京东比价折线图] 请求返回错误: ${data?.msg || "无数据"}`);
+      }
+    } catch (e) {
+      console.log(`[京东比价折线图执行异常] ${e}`);
+    } finally {
+      if (typeof $done === "function") {
+        $done({ body: respBody, headers: headers });
+      }
     }
-  );
-
-  return {
-    $log,
-    $msg,
-    $prs,
-    $http,
-    md5,
-    jsonToCustomString,
-    jsonToQueryString,
-  };
-};
+  })();
+})();
