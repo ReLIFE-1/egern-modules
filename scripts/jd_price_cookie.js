@@ -64,11 +64,21 @@ const $http = (op, t = 4) => {
 
 if (url.indexOf(path) != -1) {
     const reqbody = $request.body;
-    $.setdata(reqbody, manmanbuy_key);
-    const params = new URLSearchParams(reqbody);
-    const devId = params.get('c_mmbDevId');     
-    $.setdata(devId, "慢慢买CK");
-    $.msg($.name, '获取ck成功🎉', reqbody);
+    if (reqbody) {
+        $.setdata(reqbody, manmanbuy_key);
+        try {
+            const params = new URLSearchParams(reqbody);
+            const devId = params.get('c_mmbDevId');     
+            if (devId) {
+                $.setdata(devId, "慢慢买CK");
+            }
+        } catch (err) {
+            console.log("Parse mmbDevId error: " + err);
+        }
+        $.msg($.name, '获取ck成功🎉', '慢慢买 Cookie 获取成功，现在可以在京东查看历史比价');
+    }
+    $done({});
+    return;
 }
 
 function getck() {
@@ -223,7 +233,11 @@ const request_history_price = (id) => {
 
 (async () => {
   try {
-    let id = match[1]
+    if (!match) {
+      $done({});
+      return;
+    }
+    let id = match[1];
     let data = await request_history_price(id)
     if (data) {
         if (data.ok === 1) {
@@ -241,7 +255,7 @@ const request_history_price = (id) => {
     }
     $done({});     
 } catch (e) {
-  $log(e);
+  console.log(e);
   $done({});
 }
 })();
