@@ -106,9 +106,17 @@ scriptings:
 
   - http_request:
       name: "[京东比价] 获取慢慢买Cookie"
-      match: '^https?:\/\/(?:[a-zA-Z0-9-]+\.)?manmanbuy\.com\/'
+      match: '^https?:\/\/apapia-sqk-weblogic\.manmanbuy\.com\/baoliao\/center\/menu'
       script_url: "https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js"
       body_required: true
+      timeout: 60
+      disabled: {{{MANMANBUY_COOKIE_DISABLED}}}
+
+  - http_request:
+      name: "[京东比价] 慢慢买拦截提示"
+      match: '^https?:\/\/(?:apapia-[^\/]+|app|api)\.manmanbuy\.com\/'
+      script_url: "https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js"
+      body_required: false
       timeout: 60
       disabled: {{{MANMANBUY_COOKIE_DISABLED}}}
 
@@ -146,6 +154,7 @@ mitm:
   hostnames:
     - api.m.jd.com
     - in.m.jd.com
+    - apapia-sqk-weblogic.manmanbuy.com
     - "*.manmanbuy.com"
     - manmanbuy.com
     - m.360buyimg.com
