@@ -2,7 +2,7 @@ name: "京东App去广告与比价"
 description: "1. 过滤京东广告；2. 历史比价信息，任选其一即可。（首次使用请先打开【慢慢买App-我的】，提示【获取ck成功🎉】即可正常比价。）\n此模块仅支持京东标准模式。"
 author: "ReLIFE-1"
 homepage: "https://github.com/ReLIFE-1/egern-modules"
-icon: "https://fastly.jsdelivr.net/gh/sooyaaabo/IconLibrary@main/App/JingDong.png"
+icon: "https://cdn.jsdelivr.net/gh/sooyaaabo/IconLibrary@main/App/JingDong.png"
 open_url: "https://apps.apple.com/app/id414245413"
 
 env_schema:
@@ -49,7 +49,19 @@ compat_arguments_desc: |
 
 rules:
   - url_regex:
-      match: '^http:\/\/\w{32}\.jddebug\.com\/diagnose\?'
+      match: '^http:\/\/\\w{32}\.jddebug\.com\/diagnose\?'
+      policy: REJECT
+  - domain:
+      match: httpdns.alicdn.com
+      policy: REJECT
+  - domain:
+      match: httpdns-sdk.alicdn.com
+      policy: REJECT
+  - domain:
+      match: httpdns.push.qq.com
+      policy: REJECT
+  - domain:
+      match: httpdns.dlied1.qq.com
       policy: REJECT
 
 map_locals:
@@ -89,13 +101,13 @@ scriptings:
   - http_response:
       name: "[京东] 移除广告"
       match: '^https:\/\/api\.m\.jd\.com\/client\.action\?functionId=(?:deliverLayer|getTabHomeInfo|myOrderInfo|orderTrackBusiness|personinfoBusiness|start|welcomeHome)'
-      script_url: "https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jingdong.js"
+      script_url: "https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jingdong.js"
       body_required: true
 
   - http_request:
       name: "[京东比价] 获取慢慢买Cookie"
-      match: '^https?:\/\/apapia-sqk-weblogic\.manmanbuy\.com\/baoliao\/center\/menu'
-      script_url: "https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js"
+      match: '^https?:\/\/(?:[a-zA-Z0-9-]+\.)?manmanbuy\.com\/'
+      script_url: "https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js"
       body_required: true
       timeout: 60
       disabled: {{{MANMANBUY_COOKIE_DISABLED}}}
@@ -103,21 +115,21 @@ scriptings:
   - http_response:
       name: "[京东比价] 标题嵌入版"
       match: '^https?:\/\/api\.m\.jd\.com\/client\.action\?functionId=(wareBusiness|serverConfig|basicConfig)'
-      script_url: "https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js"
+      script_url: "https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js"
       body_required: true
       disabled: {{{JDPRICE_TITLE_EMBED_DISABLED}}}
 
   - http_request:
       name: "[京东比价] 详情通知版"
       match: '^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html'
-      script_url: "https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js"
+      script_url: "https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js"
       timeout: 60
       disabled: {{{JDPRICE_DETAIL_NOTIFY_DISABLED}}}
 
   - http_response:
       name: "[京东比价] 详情嵌入版（表格图）"
       match: '^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html'
-      script_url: "https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js"
+      script_url: "https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_embed.js"
       body_required: true
       timeout: 60
       disabled: {{{JDPRICE_DETAIL_EMBED_TABLE_DISABLED}}}
@@ -125,7 +137,7 @@ scriptings:
   - http_response:
       name: "[京东比价] 详情嵌入版（折线图）"
       match: '^https?:\/\/in\.m\.jd\.com\/product\/graphext\/\d+\.html'
-      script_url: "https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_chart.js"
+      script_url: "https://cdn.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_chart.js"
       body_required: true
       timeout: 60
       disabled: {{{JDPRICE_DETAIL_EMBED_LINE_DISABLED}}}
@@ -134,6 +146,6 @@ mitm:
   hostnames:
     - api.m.jd.com
     - in.m.jd.com
-    - apapia-sqk-weblogic.manmanbuy.com
     - "*.manmanbuy.com"
+    - manmanbuy.com
     - m.360buyimg.com
