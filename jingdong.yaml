@@ -5,6 +5,33 @@ homepage: "https://github.com/ReLIFE-1/egern-modules"
 icon: "https://fastly.jsdelivr.net/gh/sooyaaabo/IconLibrary@main/App/JingDong.png"
 open_url: "https://apps.apple.com/app/id414245413"
 
+env_schema:
+  Manmanbuy_Cookie:
+    name: "[京东比价]获取慢慢买 Cookie"
+    description: "首次使用请先打开【慢慢买】APP，提示【获取ck成功🎉】即可正常比价。"
+    default_value: "true"
+    options: ["true", "false"]
+  JDPrice_TitleEmbed:
+    name: "[京东比价]标题嵌入版"
+    description: "点击商品标题即可直接查看嵌入式历史价格"
+    default_value: "false"
+    options: ["true", "false"]
+  JDPrice_DetailNotify:
+    name: "[京东比价]详情通知版"
+    description: "点击商品详情页通过弹窗通知查看历史价格"
+    default_value: "false"
+    options: ["true", "false"]
+  JDPrice_DetailEmbed_Table:
+    name: "[京东比价]详情嵌入版（表格图）"
+    description: "点击商品详情页即可直接查看嵌入式历史价格"
+    default_value: "true"
+    options: ["true", "false"]
+  JDPrice_DetailEmbed_Line:
+    name: "[京东比价]详情嵌入版（折线图）"
+    description: "点击商品详情页即可直接查看嵌入式历史价格"
+    default_value: "false"
+    options: ["true", "false"]
+
 compat_arguments:
   MANMANBUY_COOKIE_DISABLED: false
   JDPRICE_TITLE_EMBED_DISABLED: true
@@ -67,7 +94,7 @@ scriptings:
 
   - http_request:
       name: "[京东比价] 获取慢慢买Cookie"
-      match: '^https?:\/\/apapia-sqk-weblogic\.manmanbuy\.com\/baoliao\/center\/menu$'
+      match: '^https?:\/\/apapia-sqk-weblogic\.manmanbuy\.com\/baoliao\/center\/menu'
       script_url: "https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/scripts/jd_price_cookie.js"
       body_required: true
       timeout: 60
@@ -108,4 +135,5 @@ mitm:
     - api.m.jd.com
     - in.m.jd.com
     - apapia-sqk-weblogic.manmanbuy.com
+    - "*.manmanbuy.com"
     - m.360buyimg.com
