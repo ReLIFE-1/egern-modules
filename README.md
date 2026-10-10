@@ -6,7 +6,7 @@
 
 ## 📌 模块列表
 
-### 1. 菜鸟 App 去广告净化 (`cainiao.yaml`)
+### 1. 菜鸟 App 去广告净化 (`cainiao.sgmodule`)
 
 <img src="https://fastly.jsdelivr.net/gh/zirawell/R-Store@main/Res/Icon/App/cainiao.png" width="48" height="48" alt="菜鸟" />
 
@@ -14,14 +14,14 @@
 * **作者**：`ReLIFE-1`
 * **CDN 订阅链接（推荐）**：
   ```text
-  https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/cainiao.yaml
+  https://fastly.jsdelivr.net/gh/ReLIFE-1/egern-modules@main/cainiao.sgmodule
   ```
 * **GitHub 原始链接**：
   ```text
-  https://raw.githubusercontent.com/ReLIFE-1/egern-modules/main/cainiao.yaml
+  https://raw.githubusercontent.com/ReLIFE-1/egern-modules/main/cainiao.sgmodule
   ```
 * **一键安装链接**：
-  [📱 在 iOS Safari 中点击一键导入 Egern](egern:/modules/new?url=https%3A%2F%2Ffastly.jsdelivr.net%2Fgh%2FReLIFE-1%2Fegern-modules%40main%2Fcainiao.yaml)
+  [📱 在 iOS Safari 中点击一键导入 Egern](egern:/modules/new?url=https%3A%2F%2Ffastly.jsdelivr.net%2Fgh%2FReLIFE-1%2Fegern-modules%40main%2Fcainiao.sgmodule)
 
 ---
 
